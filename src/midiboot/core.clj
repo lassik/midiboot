@@ -1,8 +1,4 @@
-#! /usr/bin/env boot
-
-(set-env! :dependencies)
-
-(ns clojure-hello-midi.core
+(ns midiboot.core
   "Show notes played from a MIDI keyboard in the console.
 
   Uses the Java MIDI API and the system default MIDI device. (In
