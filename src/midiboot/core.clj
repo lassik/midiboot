@@ -33,7 +33,7 @@
 
 (defn note-on [pitch]
   (swap! pitches-on conj pitch)
-  (show-notes (notes-on))) 
+  (show-notes (notes-on)))
 
 (defn note-off [pitch]
   (swap! pitches-on disj pitch)
@@ -78,3 +78,7 @@
              "the default transmitter and listening")
     (.setReceiver transmitter our-receiver)))
 
+
+
+(defn system-main []
+  (println "Hello system"))
