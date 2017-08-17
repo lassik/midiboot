@@ -10,7 +10,8 @@
   able to play the new device."
   (:gen-class)
   (:require [clojure.string :as string]
-            [clojure.core.match :refer [match]]))
+            [clojure.core.match :refer [match]]
+            [net.tcp.server :as tcp]))
 
 ;; To learn the Java MIDI API, start here:
 ;; https://docs.oracle.com/javase/tutorial/sound/overview-MIDI.html
@@ -39,46 +40,52 @@
   (swap! pitches-on disj pitch)
   (show-notes (notes-on)))
 
-(defn handle-midi-message [status a b]
-  (match [status a b]
-    [0x80 pitch velocity] (note-off pitch)
-    [0x90 pitch velocity] ((if (= 0 velocity) note-off note-on) pitch)
-    :else (println "Got MIDI message" status)))
+(defn handle-midi-message [message]
+  (let [[status a b] message]
+    (match [status a b]
+      [0x80 pitch velocity] (note-off pitch)
+      [0x90 pitch velocity] ((if (= 0 velocity) note-off note-on) pitch)
+      :else (println "Got MIDI message" status))))
 
-(def our-receiver
-  (reify javax.sound.midi.Receiver
-    (close [this]
-      (println "Receiver closed"))
-    (send [this msg timestamp]
-      (try
-        (handle-midi-message
-         ;; TODO: Should we mask out MIDI channel from status?
-         (.getStatus msg)
-         ;; TODO: Is it safe to call these for all messages?
-         (.getData1 msg) (.getData2 msg))
-        (catch Exception e
-          ;; We need to have this exception handler here. Otherwise
-          ;; exceptions thrown in this method (in case there's a bug
-          ;; in the above code) are muffled, execution of the method
-          ;; stops and the program continues. This probably happens
-          ;; because the method is run in a different thread from the
-          ;; main thread, and apparently "In the JVM, when an
-          ;; exception is thrown on a thread other than the main
-          ;; thread, and nothing is there to catch it, nothing
-          ;; happens. The thread dies silently." See:
-          ;; https://stuartsierra.com/2015/05/27/clojure-uncaught-exceptions
-          (println (str "exception: " (.getMessage e))))))))
+(defn status-byte? [byte]
+  (>= byte 0x80))
 
-(defn -main []
-  (println "Hello MIDI!")
-  (println "Getting default transmitter")
-  (let [transmitter (javax.sound.midi.MidiSystem/getTransmitter)]
-    (println "Default transmitter =" transmitter)
-    (println "Plugging our receiver into"
-             "the default transmitter and listening")
-    (.setReceiver transmitter our-receiver)))
+(defn skip-bytes-until [predicate stream lead-byte]
+  (loop [byte lead-byte]
+    (let [byte (or byte (.read stream))]
+      (if (or (not byte) (predicate byte))
+        byte
+        (recur nil)))))
 
+(defn read-bytes-while [predicate stream]
+  (loop [bytes []]
+    (let [byte (.read stream)]
+      (if (not (and byte (predicate byte)))
+        [bytes byte]
+        (recur (conj bytes byte))))))
 
+(defn midi-messages [stream byte]
+  (let [status-byte (skip-bytes-until status-byte? stream byte)]
+    (if status-byte
+      (let [[data-bytes next-byte]
+            (read-bytes-while (complement status-byte?) stream)]
+        (lazy-seq (cons (into [] (concat [status-byte] data-bytes))
+                    (if next-byte
+                      (midi-messages stream next-byte)
+                      nil)))))))
 
-(defn system-main []
-  (println "Hello system"))
+(defn handler [reader writer]
+  (doall (map handle-midi-message (midi-messages reader nil))))
+
+(def server (atom nil))
+
+(defn serve [port]
+  (swap! server
+    (fn [server]
+      (if server
+        (tcp/stop server))
+      (let [server (tcp/tcp-server
+                     :port    port
+                     :handler (tcp/wrap-streams handler))]
+        (tcp/start server)
+        server))))
