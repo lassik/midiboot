@@ -1,20 +1,8 @@
 (ns midiboot.core
-  "Show notes played from a MIDI keyboard in the console.
-
-  Uses the Java MIDI API and the system default MIDI device. (In
-  practice, the default device seems to be the first one that was
-  plugged in and turned on).
-
-  The system is not 'plug-and-play' sensitive so if you plug in or
-  turn on a MIDI device you need to restart the app in order to be
-  able to play the new device."
   (:gen-class)
   (:require [clojure.string :as string]
             [clojure.core.match :refer [match]]
             [net.tcp.server :as tcp]))
-
-;; To learn the Java MIDI API, start here:
-;; https://docs.oracle.com/javase/tutorial/sound/overview-MIDI.html
 
 (def note-names ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
 
