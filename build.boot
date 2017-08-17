@@ -3,7 +3,9 @@
     [boot/core "2.0.0-rc8"]
     [org.clojure/clojure "1.6.0"]
     [boot-fmt/boot-fmt "0.1.6"]
-    [org.danielsz/system "0.4.0"]]
+    [org.danielsz/system "0.4.0"]
+    [tensorflow-clj "0.1"]
+    [tcp-server "0.1.0"]]
   :source-paths #{"src"})
 
 (require
