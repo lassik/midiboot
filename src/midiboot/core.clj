@@ -28,11 +28,9 @@
   (show-notes (notes-on)))
 
 (defn handle-midi-message [message]
-  (let [[status a b] message]
-    (match [status a b]
-      [0x80 pitch velocity] (note-off pitch)
-      [0x90 pitch velocity] ((if (= 0 velocity) note-off note-on) pitch)
-      :else (println "Got MIDI message" status))))
+  (match message
+    [:note-on pitch _] (note-on pitch)
+    [:note-off pitch _] (note-off pitch)))
 
 (defn handler [input output]
   (doall (map handle-midi-message (midi/messages-from-stream input))))
