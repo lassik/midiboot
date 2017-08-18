@@ -3,18 +3,13 @@
   (:require [clojure.string :as string]
             [clojure.core.match :refer [match]]
             [net.tcp.server :as tcp]
-            [midiboot.midi :as midi]))
-
-(def note-names ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
-
-(defn pitch-class [pitch] (mod pitch 12))
-
-(defn note-name [pitch] (get note-names (pitch-class pitch)))
+            [midiboot.midi :as midi]
+            [midiboot.music :as music]))
 
 (def pitches-on (atom (sorted-set)))
 
 (defn notes-on []
-  (map note-name @pitches-on))
+  (map music/note-name @pitches-on))
 
 (defn show-notes [notes]
   (println (if (empty? notes) "(none)" (string/join " " notes))))
