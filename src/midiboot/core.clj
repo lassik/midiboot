@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [clojure.string :as string]
             [clojure.core.match :refer [match]]
+            [tensorflow-clj.core :as tf]
             [net.tcp.server :as tcp]
             [midiboot.midi :as midi]
             [midiboot.music :as music]))
@@ -22,10 +23,15 @@
   (swap! pitches-on disj pitch)
   (show-notes (notes-on)))
 
+(defn transform [pitch]
+  (tf/with-graph-file "misc/transpose.pb"
+    (let [[pitch] (tf/run-graph {:pitch_in (float pitch)} :pitch_out)]
+      (int pitch))))
+
 (defn handle-midi-message [message]
   (match message
-    [:note-on pitch _] (note-on pitch)
-    [:note-off pitch _] (note-off pitch)))
+    [:note-on pitch _] (note-on (transform pitch))
+    [:note-off pitch _] (note-off (transform pitch))))
 
 (defn handler [input output]
   (doall (map handle-midi-message (midi/messages-from-stream input))))
